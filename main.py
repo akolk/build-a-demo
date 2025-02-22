@@ -4,32 +4,36 @@ from tools.github_api import create_github_repo, push_code
 from tools.llm_codegen import generate_code_and_tests
 from tools.deployment import create_dockerfile, deploy_application
 
+
+issue_id = "JIRA-12345"  # Example issue ID
+issue_source = "github"  # Change to "github" if using GitHub Issues
+
 # JIRA Agent
 jira_agent = Agent(
     name="JIRA Agent",
     role="Fetches user story from JIRA",
-    function=fetch_jira_issue
+    function=lambda: fetch_jira_issue(issue_id)
 )
 
 # Code Generation Agent
 code_gen_agent = Agent(
-    name="CodeGen Agent",
-    role="Generates Python program and tests",
-    function=generate_code_and_tests
+    name="Code Generation Agent",
+    role="Generates Python code and tests",
+    function=lambda: generate_code_and_tests(fetch_jira_issue(issue_id), issue_source)
 )
 
 # GitHub Agent
 github_agent = Agent(
     name="GitHub Agent",
     role="Creates a repository and pushes code",
-    function=create_github_repo
+    function=lambda: create_github_repo("repo-name", issue_id, issue_source)
 )
 
 # Deployment Agent
 deployment_agent = Agent(
     name="Deployment Agent",
-    role="Generates Dockerfile and deploys the app",
-    function=deploy_application
+    role="Generates a Dockerfile and deploys the app",
+    function=lambda: deploy_application(issue_id, issue_source)
 )
 
 # Define Tasks

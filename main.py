@@ -1,47 +1,34 @@
-from crewai import Agent, Task, Crew
-from tools.jira_api import fetch_jira_issue
-from tools.github_api import create_github_repo, push_code
-from tools.llm_codegen import generate_code_and_tests
-from tools.deployment import create_dockerfile, deploy_application
+from tools.github_api import get_open_issues, create_github_repo, update_github_issue
+from tools.llm_codegen import generate_code
+from tools.deployment import generate_dockerfile_and_deploy
 
+# Fetch open GitHub issues
+issues = get_open_issues()
 
-issue_id = "JIRA-12345"  # Example issue ID
-issue_source = "github"  # Change to "github" if using GitHub Issues
+for issue in issues:
+    issue_id = issue["number"]
+    issue_title = issue["title"]
+    issue_body = issue["body"]
+    repo_name = f"demo-{issue_id}"  # Generate a unique repo name
 
-# JIRA Agent
-jira_agent = Agent(
-    name="JIRA Agent",
-    role="Fetches user story from JIRA",
-    function=lambda: fetch_jira_issue(issue_id)
-)
+    update_github_issue(issue_id, "Processing started... ⚙️")
 
-# Code Generation Agent
-code_gen_agent = Agent(
-    name="Code Generation Agent",
-    role="Generates Python code and tests",
-    function=lambda: generate_code_and_tests(fetch_jira_issue(issue_id), issue_source)
-)
+    # Step 1: Create GitHub Repo
+    repo = create_github_repo(repo_name, issue_id)
+    if not repo:
+        continue  # Skip to next issue if repo creation fails
 
-# GitHub Agent
-github_agent = Agent(
-    name="GitHub Agent",
-    role="Creates a repository and pushes code",
-    function=lambda: create_github_repo("repo-name", issue_id, issue_source)
-)
+    # Step 2: Generate Code
+    code = generate_code(issue_title, issue_body, issue_id)
+    if not code:
+        continue  # Skip to next issue if code generation fails
 
-# Deployment Agent
-deployment_agent = Agent(
-    name="Deployment Agent",
-    role="Generates a Dockerfile and deploys the app",
-    function=lambda: deploy_application(issue_id, issue_source)
-)
+    # Step 3: Push Code to GitHub (mocked)
+    update_github_issue(issue_id, "Pushing Code to GitHub... ⏳")
+    # Here you would add logic to push the generated code
+    update_github_issue(issue_id, "Code Pushed Successfully ✅")
 
-# Define Tasks
-task1 = Task(agent=jira_agent, description="Fetch user story from JIRA")
-task2 = Task(agent=code_gen_agent, description="Generate Python code and tests")
-task3 = Task(agent=github_agent, description="Create GitHub repo and push code")
-task4 = Task(agent=deployment_agent, description="Generate Dockerfile & deploy")
+    # Step 4: Generate Dockerfile & Deploy
+    generate_dockerfile_and_deploy(issue_id)
 
-# Assemble Crew
-crew = Crew(agents=[jira_agent, code_gen_agent, github_agent, deployment_agent])
-crew.run([task1, task2, task3, task4])
+    update_github_issue(issue_id, "Processing completed! 🎉")
